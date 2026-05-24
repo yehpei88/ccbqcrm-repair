@@ -17,7 +17,7 @@ import {
   ArrowUpDown, Info, Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { MapView, geocodeAddress } from '@/components/Map';
+import { MapView } from '@/components/Map';
 
 const PIN_COLORS: Record<PinStatus, string> = {
   'red-star': '#ef4444',
@@ -48,20 +48,17 @@ export default function StaffMap() {
       return 0;
     });
 
-  const [geocodingComplete, setGeocodingComplete] = useState(false);
   useEffect(() => {
-    const loadMarkers = async () => {
-      for (const minsu of MOCK_MINSU_DATA) {
-        const location = await geocodeAddress(minsu.address);
-        if (location) {
-          markerLocationsRef.current.set(minsu.id, location);
-        }
-      }
-      setGeocodingComplete(true);
-    };
-
-    loadMarkers();
+    // 直接使用民宿資料中的坐標，無需地理編碼
+    for (const minsu of MOCK_MINSU_DATA) {
+      markerLocationsRef.current.set(minsu.id, {
+        lat: minsu.latitude,
+        lng: minsu.longitude,
+      });
+    }
   }, []);
+
+  const [geocodingComplete] = useState(true);
 
   const handleMapReady = (map: L.Map) => {
     mapRef.current = map;

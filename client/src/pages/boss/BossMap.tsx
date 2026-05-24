@@ -16,7 +16,7 @@ import {
 import { toast } from 'sonner';
 import { MapPin, Edit3, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { MapView, geocodeAddress } from '@/components/Map';
+import { MapView } from '@/components/Map';
 
 const PIN_COLORS: Record<PinStatus, string> = {
   'red-star': '#ef4444',
@@ -28,6 +28,8 @@ const PIN_COLORS: Record<PinStatus, string> = {
 
 export default function BossMap() {
   const [selectedMinsu, setSelectedMinsu] = useState<Minsu | null>(null);
+  const [editingMinsu, setEditingMinsu] = useState<Minsu | null>(null);
+  const [editingStatus, setEditingStatus] = useState<PinStatus | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [newStatus, setNewStatus] = useState<PinStatus | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -43,21 +45,17 @@ export default function BossMap() {
     .sort((a, b) => b.aiScore - a.aiScore);
 
   // 使用 geocodeAddress 進行地理編碼
-  const [geocodingComplete, setGeocodingComplete] = useState(false);
   useEffect(() => {
-    const loadMarkers = async () => {
-      for (const minsu of MOCK_MINSU_DATA) {
-        const location = await geocodeAddress(minsu.address);
-        if (location) {
-          markerLocationsRef.current.set(minsu.id, location);
-        }
-      }
-      // 地理編碼完成後強制重新渲染
-      setGeocodingComplete(true);
-    };
-
-    loadMarkers();
+    // 直接使用民宿資料中的坐標，無需地理編碼
+    for (const minsu of MOCK_MINSU_DATA) {
+      markerLocationsRef.current.set(minsu.id, {
+        lat: minsu.latitude,
+        lng: minsu.longitude,
+      });
+    }
   }, []);
+
+  const [geocodingComplete] = useState(true);
 
   const handleMapReady = (map: L.Map) => {
     mapRef.current = map;
