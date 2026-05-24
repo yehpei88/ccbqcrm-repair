@@ -1,7 +1,8 @@
 // CC 代客烤肉 CRM 系統 — 顧客開發人員撥號登錄頁面
 // 設計：電話開發記錄，5 種回饋狀態，直覺操作
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'wouter';
 import Layout, { PageHeader } from '@/components/Layout';
 import { MOCK_MINSU_DATA, CALL_RESULT_CONFIG, PIN_STATUS_CONFIG, type Minsu, type CallResult } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -27,14 +28,16 @@ const RESULT_ICONS: Record<CallResult, React.ReactNode> = {
   'closed': <Store size={16} className="text-gray-400" />,
 };
 
-// 今日待撥清單：優先紅星，其次紅標
-const TODAY_LIST = MOCK_MINSU_DATA
-  .filter(m => m.pinStatus === 'red-star' || m.pinStatus === 'red')
-  .sort((a, b) => {
-    if (a.pinStatus === 'red-star' && b.pinStatus !== 'red-star') return -1;
-    if (b.pinStatus === 'red-star' && a.pinStatus !== 'red-star') return 1;
-    return b.aiScore - a.aiScore;
-  });
+// 今日待撥清單：優先紅星，其次紅標（只限於分配的區域）
+const getTodayList = (assignedAreas: string[]) => {
+  return MOCK_MINSU_DATA
+    .filter(m => (m.pinStatus === 'red-star' || m.pinStatus === 'red') && assignedAreas.includes(m.area))
+    .sort((a, b) => {
+      if (a.pinStatus === 'red-star' && b.pinStatus !== 'red-star') return -1;
+      if (b.pinStatus === 'red-star' && a.pinStatus !== 'red-star') return 1;
+      return b.aiScore - a.aiScore;
+    });
+};
 
 function CallResultButton({
   result,
@@ -63,6 +66,7 @@ function CallResultButton({
 }
 
 export default function CallLog() {
+  const [, setLocation] = useLocation();
   const [search, setSearch] = useState('');
   const [selectedMinsu, setSelectedMinsu] = useState<Minsu | null>(null);
   const [showCallDialog, setShowCallDialog] = useState(false);
@@ -70,6 +74,21 @@ export default function CallLog() {
   const [note, setNote] = useState('');
   const [callHistory, setCallHistory] = useState<Record<string, { result: CallResult; note: string; time: string }>>({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // 從 localStorage 獲取登入的工讀生信息
+  const staffId = localStorage.getItem('staffId');
+  const staffName = localStorage.getItem('staffName');
+  const assignedAreasStr = localStorage.getItem('assignedAreas');
+  const assignedAreas = assignedAreasStr ? JSON.parse(assignedAreasStr) : [];
+
+  // 如果未登入，重定向到登入頁
+  useEffect(() => {
+    if (!staffId) {
+      setLocation('/');
+    }
+  }, [staffId, setLocation]);
+
+  const TODAY_LIST = getTodayList(assignedAreas);
 
   const filtered = TODAY_LIST.filter(m =>
     !search || m.name.includes(search) || m.area.includes(search) || m.phone.includes(search)
@@ -112,8 +131,8 @@ export default function CallLog() {
   return (
     <Layout role="staff">
       <PageHeader
-        title="撥號登錄"
-        subtitle="今日電話開發清單 — 登錄通話結果"
+        title={`撥號登錄 - ${staffName}`}
+        subtitle={`今日電話開發清單 (負責區域: ${assignedAreas.join('、')}) — 登錄通話結果`}
         actions={
           <div className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">今日進度：</span>
