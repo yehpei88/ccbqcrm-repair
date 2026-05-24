@@ -67,10 +67,9 @@ export default function BossMap() {
   const handleSelectMinsu = (minsu: Minsu) => {
     setSelectedMinsu(minsu);
     
-    // 如果 marker 已經載入，則縮放地圖並定位
-    if (mapRef.current && markerLocationsRef.current.has(minsu.id)) {
-      const location = markerLocationsRef.current.get(minsu.id)!;
-      mapRef.current.setView([location.lat, location.lng], 16);
+    // 使用民宿資料中的坐標直接縮放地圖
+    if (mapRef.current) {
+      mapRef.current.setView([minsu.latitude, minsu.longitude], 16);
       // 開啟 popup
       const marker = markersRef.current.get(minsu.id);
       if (marker && 'openPopup' in marker) {
