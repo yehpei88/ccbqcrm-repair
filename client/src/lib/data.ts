@@ -21,6 +21,14 @@ export interface AreaAssignment {
   assignedAt: string;
 }
 
+export interface CallSummary {
+  id: string;
+  timestamp: string;
+  summary: string;
+  intentLabel: IntentLabel;
+  source: 'voice' | 'manual'; // 語音或手動輸入
+}
+
 export interface Minsu {
   id: string;
   name: string;
@@ -44,6 +52,7 @@ export interface Minsu {
   rfmM?: number;
   latitude: number;
   longitude: number;
+  callSummaries?: CallSummary[]; // 通話摘要歷史
 }
 
 export interface Alert {
@@ -361,3 +370,36 @@ export const STAFF_LOGIN_CREDENTIALS: StaffLogin[] = [
   { staffId: 'staff-2', staffName: '小林', username: 'lin', password: '123456', assignedAreas: ['冬山鄉', '羅東鎮', '三星鄉'] },
   { staffId: 'staff-3', staffName: '小王', username: 'wang', password: '123456', assignedAreas: ['蘇澳鎮', '五結鄉', '頭城鎮'] },
 ];
+
+
+// AI 意向分類邏輯
+export function classifyIntent(summary: string): IntentLabel {
+  const text = summary.toLowerCase();
+  
+  // 🔥 高熱度：明確表達預約意願、詢問具體檔期、詢問價格、要求確認場地
+  const hotKeywords = ['預約', '訂金', '檔期', '幾月', '幾人', '確認', '馬上', '立即', '趕快', '急', '要', '確定', '成交', '簽約', '簽約金', '訂單'];
+  if (hotKeywords.some(kw => text.includes(kw))) {
+    return 'hot';
+  }
+  
+  // 💬 詢價中：詢問價格、費用、優惠、方案
+  const inquiringKeywords = ['多少錢', '價格', '費用', '優惠', '折扣', '方案', '套餐', '包含', '詢價', '報價', '怎麼算'];
+  if (inquiringKeywords.some(kw => text.includes(kw))) {
+    return 'inquiring';
+  }
+  
+  // 🙅 婉拒：明確拒絕、不需要、沒興趣、不合作
+  const rejectedKeywords = ['拒絕', '不需要', '沒興趣', '不合作', '不要', '算了', '不用', '不行', '不可能', '沒辦法'];
+  if (rejectedKeywords.some(kw => text.includes(kw))) {
+    return 'rejected';
+  }
+  
+  // 👁 已讀：已讀但未回應、需要再聯絡、再想想、考慮中
+  const seenKeywords = ['再想想', '考慮', '再聯絡', '之後', '有機會', '看看', '再說', '等等', '先不用', '暫時'];
+  if (seenKeywords.some(kw => text.includes(kw))) {
+    return 'seen';
+  }
+  
+  // 預設為已讀
+  return 'seen';
+}

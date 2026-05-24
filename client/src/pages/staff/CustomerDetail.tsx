@@ -1,18 +1,18 @@
-// CC 代客烤肉 CRM 系統 — 顧客開發人員客戶備注頁面
 // 設計：民宿詳細資訊查看與備注輸入，顧客開發人員作業介面
 
 import { useState } from 'react';
 import Layout, { PageHeader } from '@/components/Layout';
-import { MOCK_MINSU_DATA, PIN_STATUS_CONFIG, CALL_RESULT_CONFIG, INTENT_CONFIG, type Minsu, type PinStatus } from '@/lib/data';
+import { MOCK_MINSU_DATA, PIN_STATUS_CONFIG, CALL_RESULT_CONFIG, INTENT_CONFIG, classifyIntent, type Minsu, type PinStatus, type CallSummary } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import {
   Search, FileText, Phone, MapPin, Home, Umbrella,
   Star, TrendingUp, MessageSquare, Save, ChevronRight,
-  Building2, Clock
+  Building2, Clock, Mic, Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -29,6 +29,9 @@ export default function CustomerDetail() {
   const [selectedMinsu, setSelectedMinsu] = useState<Minsu | null>(MOCK_MINSU_DATA[0]);
   const [note, setNote] = useState(MOCK_MINSU_DATA[0]?.note ?? '');
   const [filterArea, setFilterArea] = useState<string>('all');
+  const [callSummaries, setCallSummaries] = useState<Record<string, CallSummary[]>>({});
+  const [summaryInput, setSummaryInput] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const areas = ['all', ...Array.from(new Set(MOCK_MINSU_DATA.map(m => m.area)))];
 
@@ -46,6 +49,42 @@ export default function CustomerDetail() {
   const handleSaveNote = () => {
     toast.success(`已儲存「${selectedMinsu?.name}」的備注`);
   };
+
+  const handleAddCallSummary = () => {
+    if (!summaryInput.trim() || !selectedMinsu) {
+      toast.error('請輸入通話摘要');
+      return;
+    }
+
+    const intentLabel = classifyIntent(summaryInput);
+    const newSummary: CallSummary = {
+      id: Date.now().toString(),
+      timestamp: new Date().toLocaleString('zh-TW'),
+      summary: summaryInput,
+      intentLabel,
+      source: 'manual',
+    };
+
+    const minsuId = selectedMinsu.id;
+    setCallSummaries(prev => ({
+      ...prev,
+      [minsuId]: [...(prev[minsuId] || []), newSummary],
+    }));
+
+    toast.success(`已新增通話摘要，意向分類：${INTENT_CONFIG[intentLabel].label}`);
+    setSummaryInput('');
+    setIsDialogOpen(false);
+  };
+
+  const handleDeleteSummary = (minsuId: string, summaryId: string) => {
+    setCallSummaries(prev => ({
+      ...prev,
+      [minsuId]: prev[minsuId].filter(s => s.id !== summaryId),
+    }));
+    toast.success('已刪除通話摘要');
+  };
+
+  const minsuSummaries = selectedMinsu ? (callSummaries[selectedMinsu.id] || []) : [];
 
   return (
     <Layout role="staff">
@@ -108,7 +147,7 @@ export default function CustomerDetail() {
                     <div className="text-xs font-medium text-foreground truncate">{minsu.name}</div>
                     <div className="text-xs text-muted-foreground">{minsu.area}</div>
                   </div>
-                  {minsu.note && (
+                  {(minsu.note || callSummaries[minsu.id]?.length) && (
                     <FileText size={11} className="text-blue-400 flex-shrink-0" />
                   )}
                   <ChevronRight size={11} className="text-muted-foreground flex-shrink-0" />
@@ -271,6 +310,88 @@ export default function CustomerDetail() {
                     ))}
                   </div>
                 </div>
+              </div>
+
+              {/* LINE 語音通話摘要 */}
+              <div className="bg-white rounded-xl border border-border p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <Mic size={14} />
+                    LINE 語音通話摘要
+                  </h3>
+                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" variant="outline" className="gap-1.5">
+                        <Mic size={13} />
+                        手動輸入摘要
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>輸入通話摘要</DialogTitle>
+                        <DialogDescription>
+                          輸入與「{selectedMinsu.name}」的通話重點，系統 AI 將自動分類意向
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <Textarea
+                          placeholder="例如：問說 7 月有沒有空，要 15 人，詢問價格..."
+                          className="resize-none"
+                          rows={4}
+                          value={summaryInput}
+                          onChange={e => setSummaryInput(e.target.value)}
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={handleAddCallSummary}
+                            className="flex-1"
+                            style={{ background: 'oklch(0.65 0.22 25)', color: 'white' }}
+                          >
+                            提交摘要
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setIsDialogOpen(false)}
+                          >
+                            取消
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+
+                {minsuSummaries.length > 0 ? (
+                  <div className="space-y-3">
+                    {minsuSummaries.map(summary => (
+                      <div key={summary.id} className="border border-border rounded-lg p-3 bg-muted/30">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className={cn('text-xs px-2 py-0.5 rounded-full border', INTENT_CONFIG[summary.intentLabel].color)}>
+                              {INTENT_CONFIG[summary.intentLabel].label}
+                            </span>
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Clock size={11} />
+                              {summary.timestamp}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteSummary(selectedMinsu.id, summary.id)}
+                            className="text-muted-foreground hover:text-red-500 transition-colors"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                        <p className="text-sm text-foreground">{summary.summary}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-muted-foreground">
+                    <Mic size={24} className="mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">尚無通話摘要記錄</p>
+                  </div>
+                )}
               </div>
 
               {/* 備注輸入 */}
