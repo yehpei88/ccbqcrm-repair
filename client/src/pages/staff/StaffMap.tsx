@@ -2,6 +2,7 @@
 // 設計：地圖 Pin 操作，過濾器，AI 推薦優先撥打
 
 import { useState, useRef, useEffect } from 'react';
+import type { PinStatus } from '@/lib/data';
 import L from 'leaflet';
 import Layout, { PageHeader } from '@/components/Layout';
 import { MOCK_MINSU_DATA, PIN_STATUS_CONFIG, MINSU_COORDINATES, MOCK_STAFF, type Minsu } from '@/lib/data';
@@ -18,6 +19,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MapView } from '@/components/Map';
+
+type PinStatus = 'red-star' | 'red' | 'green' | 'purple' | 'gold';
 
 const PIN_COLORS: Record<PinStatus, string> = {
   'red-star': '#ef4444',
@@ -36,9 +39,18 @@ export default function StaffMap() {
   const markersRef = useRef<Map<string, L.CircleMarker | L.Marker>>(new Map());
   const markerLocationsRef = useRef<Map<string, { lat: number; lng: number }>>(new Map());
 
-  // 顧客開發人員只看未開發的（紅星、紅標）和已加LINE的（綠標）
-  const currentStaff = MOCK_STAFF[0];
-  const assignedAreas = currentStaff?.assignedAreas || [];
+  // 從 localStorage 獲取登入的工讀生信息
+  const staffId = localStorage.getItem('staffId');
+  const staffName = localStorage.getItem('staffName');
+  const assignedAreasStr = localStorage.getItem('assignedAreas');
+  const assignedAreas = assignedAreasStr ? JSON.parse(assignedAreasStr) : [];
+
+  // 如果未登入，重定向到登入頁
+  useEffect(() => {
+    if (!staffId) {
+      setLocation('/');
+    }
+  }, [staffId, setLocation]);
 
   const filtered = MOCK_MINSU_DATA
     .filter(m => {
@@ -88,17 +100,17 @@ export default function StaffMap() {
     setLocation(`/staff/call?id=${minsu.id}`);
   };
 
-  // AI 推薦：紅星且分數最高的前 3 筆
+  // AI 推薦：紅星且分數最高的前 3 筆（只限於分配的區域）
   const aiRecommended = MOCK_MINSU_DATA
-    .filter(m => m.pinStatus === 'red-star')
+    .filter(m => m.pinStatus === 'red-star' && assignedAreas.includes(m.area))
     .sort((a, b) => b.aiScore - a.aiScore)
     .slice(0, 3);
 
   return (
     <Layout role="staff">
       <PageHeader
-        title="地圖作業"
-        subtitle={`${currentStaff.name} 負責區域：${assignedAreas.join('、')} — 點擊 Pin 查看詳情`}
+        title={`地圖作業 - ${staffName}`}
+        subtitle={`負責區域：${assignedAreas.join('、')} — 點擊 Pin 查看詳情`}
       />
 
       <div className="flex h-[calc(100vh-73px)]">

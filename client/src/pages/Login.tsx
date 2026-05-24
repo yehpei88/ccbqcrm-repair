@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { STAFF_LOGIN_CREDENTIALS } from '@/lib/data';
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -20,10 +21,33 @@ export default function Login() {
       toast.error('請輸入帳號與密碼');
       return;
     }
+
     if (role === 'boss') {
-      setLocation('/boss/vip');
+      // 老闆登入（簡化版，直接進入）
+      if (username === 'boss' && password === 'boss123') {
+        // 存儲登入狀態到 localStorage
+        localStorage.setItem('userRole', 'boss');
+        localStorage.setItem('username', 'boss');
+        setLocation('/boss/dashboard');
+      } else {
+        toast.error('老闆帳號或密碼錯誤');
+      }
     } else {
-      setLocation('/staff/map');
+      // 工讀生登入驗證
+      const staff = STAFF_LOGIN_CREDENTIALS.find(
+        s => s.username === username && s.password === password
+      );
+      
+      if (staff) {
+        // 存儲登入狀態到 localStorage
+        localStorage.setItem('userRole', 'staff');
+        localStorage.setItem('staffId', staff.staffId);
+        localStorage.setItem('staffName', staff.staffName);
+        localStorage.setItem('assignedAreas', JSON.stringify(staff.assignedAreas));
+        setLocation('/staff/map');
+      } else {
+        toast.error('工讀生帳號或密碼錯誤');
+      }
     }
   };
 
@@ -142,30 +166,48 @@ export default function Login() {
             <button
               className="text-xs px-3 py-1.5 rounded-full border transition-colors"
               style={{ borderColor: 'oklch(0.40 0.07 250)', color: 'oklch(0.78 0.05 250)' }}
-              onClick={() => setLocation('/boss/vip')}
-            >
-              老闆 - VIP 管理
-            </button>
-            <button
-              className="text-xs px-3 py-1.5 rounded-full border transition-colors"
-              style={{ borderColor: 'oklch(0.40 0.07 250)', color: 'oklch(0.78 0.05 250)' }}
-              onClick={() => setLocation('/boss/dashboard')}
+              onClick={() => {
+                localStorage.setItem('userRole', 'boss');
+                setLocation('/boss/dashboard');
+              }}
             >
               老闆 - 儀表板
             </button>
             <button
               className="text-xs px-3 py-1.5 rounded-full border transition-colors"
               style={{ borderColor: 'oklch(0.40 0.07 250)', color: 'oklch(0.78 0.05 250)' }}
-              onClick={() => setLocation('/staff/map')}
+              onClick={() => {
+                localStorage.setItem('userRole', 'boss');
+                setLocation('/boss/vip');
+              }}
             >
-              顧客開發人員 - 地圖
+              老闆 - VIP 管理
             </button>
             <button
               className="text-xs px-3 py-1.5 rounded-full border transition-colors"
               style={{ borderColor: 'oklch(0.40 0.07 250)', color: 'oklch(0.78 0.05 250)' }}
-              onClick={() => setLocation('/staff/call')}
+              onClick={() => {
+                localStorage.setItem('userRole', 'staff');
+                localStorage.setItem('staffId', 'staff-1');
+                localStorage.setItem('staffName', '小陳');
+                localStorage.setItem('assignedAreas', JSON.stringify(['礁溪鄉', '員山鄉', '壯圍鄉']));
+                setLocation('/staff/map');
+              }}
             >
-              顧客開發人員 - 撥號
+              工讀生 - 地圖（小陳）
+            </button>
+            <button
+              className="text-xs px-3 py-1.5 rounded-full border transition-colors"
+              style={{ borderColor: 'oklch(0.40 0.07 250)', color: 'oklch(0.78 0.05 250)' }}
+              onClick={() => {
+                localStorage.setItem('userRole', 'staff');
+                localStorage.setItem('staffId', 'staff-2');
+                localStorage.setItem('staffName', '小林');
+                localStorage.setItem('assignedAreas', JSON.stringify(['冬山鄉', '羅東鎮', '三星鄉']));
+                setLocation('/staff/map');
+              }}
+            >
+              工讀生 - 地圖（小林）
             </button>
           </div>
         </div>
