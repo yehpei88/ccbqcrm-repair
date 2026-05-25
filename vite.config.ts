@@ -167,6 +167,14 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      external: [
+        "@tanstack/react-query",
+        "@trpc/client",
+        "@trpc/react-query",
+        "superjson",
+      ],
+    },
   },
   server: {
     host: true,
