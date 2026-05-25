@@ -286,94 +286,119 @@ export default function StaffMap() {
 
           {/* 右側：民宿詳情卡片 */}
           {selectedMinsu && (
-            <div className="absolute top-4 right-4 w-80 max-h-[calc(100vh-100px)] overflow-y-auto bg-white rounded-lg shadow-lg border border-slate-200 z-10">
+            <div className="absolute top-4 right-4 w-96 max-h-[calc(100vh-100px)] overflow-y-auto bg-white rounded-xl shadow-2xl border border-slate-200 z-10">
               {/* 卡片頭部 */}
-              <div className="p-4 border-b border-slate-200 sticky top-0 bg-white">
+              <div className="p-4 border-b border-slate-200 sticky top-0 bg-white rounded-t-xl">
                 <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="font-semibold text-sm text-slate-900">{selectedMinsu.name}</h3>
-                    <Badge className="mt-2 text-xs bg-red-100 text-red-700 font-semibold">
-                      {PIN_COLORS[selectedMinsu.pinStatus as PinStatus]?.label} · AI {selectedMinsu.aiScore}/50
-                    </Badge>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-lg text-slate-900">{selectedMinsu.name}</h3>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Badge className="text-xs bg-red-100 text-red-700 font-semibold">
+                        {PIN_COLORS[selectedMinsu.pinStatus as PinStatus]?.label}
+                      </Badge>
+                      <span className="text-xs text-slate-500">AI {selectedMinsu.aiScore}/50</span>
+                    </div>
                   </div>
                   <button
                     onClick={() => setSelectedMinsu(null)}
-                    className="text-slate-400 hover:text-slate-600"
+                    className="text-slate-400 hover:text-slate-600 flex-shrink-0"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
               </div>
 
               {/* 卡片內容 */}
-              <div className="p-4 space-y-4 text-xs">
+              <div className="p-4 space-y-4">
                 {/* 基本資料 */}
-                <div className="space-y-2">
-                  <div className="text-slate-600 font-semibold text-xs">基本資料</div>
-                  <div className="space-y-1.5">
+                <div className="space-y-3">
+                  <div className="text-slate-600 font-bold text-sm">基本資料</div>
+                  <div className="space-y-2 text-xs">
                     <div>
-                      <span className="text-slate-500 text-xs">地址</span>
+                      <span className="text-slate-500 text-xs font-medium">地址</span>
                       <p className="font-medium text-slate-900 mt-0.5">{selectedMinsu.address}</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <span className="text-slate-500 text-xs">電話</span>
+                        <span className="text-slate-500 text-xs font-medium">電話</span>
                         <p className="font-medium text-slate-900 mt-0.5">{selectedMinsu.phone}</p>
                       </div>
                       <div>
-                        <span className="text-slate-500 text-xs">地區</span>
+                        <span className="text-slate-500 text-xs font-medium">地區</span>
                         <p className="font-medium text-slate-900 mt-0.5">{selectedMinsu.area}</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* 聯繫方式 */}
+                {/* 詳細信息 */}
                 <div className="border-t border-slate-200 pt-3">
-                  <span className="text-slate-600 font-semibold text-xs">聯繫方式</span>
-                  <div className="space-y-1.5 mt-2">
-                    <div className="flex items-center gap-2 p-2 bg-slate-50 rounded">
-                      <Phone className="w-3 h-3 text-slate-400" />
-                      <span className="font-medium text-slate-900">{selectedMinsu.phone}</span>
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span className="text-slate-500 font-medium">類型</span>
+                      <p className="font-medium text-slate-900 mt-1">民宿</p>
                     </div>
-                    <div className="flex items-center gap-2 p-2 bg-green-50 rounded">
-                      <span className="text-sm">💬</span>
-                      <span className="font-medium text-slate-900">
-                        LINE 狀態：{selectedMinsu.pinStatus === 'green' ? '✅ 已加' : '❌ 未加'}
-                      </span>
+                    <div>
+                      <span className="text-slate-500 font-medium">雨棚</span>
+                      <p className="font-medium text-slate-900 mt-1">{selectedMinsu.hasRainShelter ? '有' : '無'}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 font-medium">負責聯絡員</span>
+                      <p className="font-medium text-slate-900 mt-1">待指定</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 font-medium">通話結果</span>
+                      <p className="font-medium text-slate-900 mt-1">未聯繫</p>
                     </div>
                   </div>
                 </div>
 
-                {/* 合作狀態 */}
+                {/* 通話狀態 */}
                 <div className="border-t border-slate-200 pt-3">
-                  <span className="text-slate-600 font-semibold text-xs">合作狀態</span>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    <div className="p-2 bg-slate-50 rounded">
-                      <span className="text-slate-500 text-xs">合作狀態</span>
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span className="text-slate-500 font-medium">AI 意向</span>
+                      <p className="font-medium text-slate-900 mt-1">—</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 font-medium">LINE 狀態</span>
                       <p className="font-medium text-slate-900 mt-1">
-                        {selectedMinsu.pinStatus === 'purple' ? '合作中' : '未合作'}
+                        {selectedMinsu.pinStatus === 'green' ? '✅ 已加入' : '❌ 未加入'}
                       </p>
                     </div>
-                    <div className="p-2 bg-slate-50 rounded">
-                      <span className="text-slate-500 text-xs">AI 評分</span>
-                      <p className="font-medium text-slate-900 mt-1">{selectedMinsu.aiScore}/50</p>
+                    <div>
+                      <span className="text-slate-500 font-medium">合作次數</span>
+                      <p className="font-medium text-slate-900 mt-1">0 次</p>
                     </div>
+                  </div>
+                </div>
+
+                {/* AI 推薦評分 */}
+                <div className="border-t border-slate-200 pt-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-slate-600 font-bold text-sm">總分</span>
+                    <span className="text-slate-900 font-bold text-sm">{selectedMinsu.aiScore}/50</span>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-red-500 to-orange-500 h-full rounded-full transition-all"
+                      style={{ width: `${(selectedMinsu.aiScore / 50) * 100}%` }}
+                    />
                   </div>
                 </div>
 
                 {/* 備注 */}
                 {selectedMinsu.note && (
                   <div className="border-t border-slate-200 pt-3">
-                    <span className="text-slate-600 font-semibold text-xs">備注</span>
+                    <span className="text-slate-600 font-bold text-sm">備注</span>
                     <p className="text-slate-700 bg-slate-50 p-2 rounded mt-2 text-xs">{selectedMinsu.note}</p>
                   </div>
                 )}
 
                 {/* 快速操作 */}
-                <div className="border-t border-slate-200 pt-3">
+                <div className="border-t border-slate-200 pt-4">
                   <Button
-                    className="w-full h-9 text-sm gap-2 font-semibold bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white"
+                    className="w-full h-10 text-sm gap-2 font-bold bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white rounded-lg"
                     onClick={() => handleCall(selectedMinsu)}
                   >
                     <Phone className="w-4 h-4" />
