@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Layout, { PageHeader } from '@/components/Layout';
-import { MOCK_MINSU_DATA, PIN_STATUS_CONFIG, AREA_ASSIGNMENTS, type Minsu } from '@/lib/data';
+import { MOCK_MINSU_DATA, PIN_STATUS_CONFIG, AREA_ASSIGNMENTS, type Minsu, type CallResult } from '@/lib/data';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { MapPin, Star, Phone, X } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { toast } from 'sonner';
+import { ContactCompleteDialog } from '@/components/ContactCompleteDialog';
 
 type PinStatus = 'red-star' | 'red' | 'green' | 'purple' | 'gold';
 
@@ -30,6 +31,10 @@ export default function StaffMap() {
   const [selectedMinsu, setSelectedMinsu] = useState<Minsu | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterArea, setFilterArea] = useState<string>('all');
+  const [showContactDialog, setShowContactDialog] = useState(false);
+  const [minsuData, setMinsuData] = useState<Record<string, Minsu>>(
+    MOCK_MINSU_DATA.reduce((acc, m) => ({ ...acc, [m.id]: m }), {})
+  );
 
   // 從 localStorage 獲取登入的顧客開發人員信息
   const staffId = localStorage.getItem('staffId');
@@ -45,7 +50,7 @@ export default function StaffMap() {
   }, [staffId, setLocation]);
 
   // 過濾該顧客開發人員分配區域的民宿
-  const assignedMinsu = MOCK_MINSU_DATA.filter(m => assignedAreas.includes(m.area));
+  const assignedMinsu = Object.values(minsuData).filter(m => assignedAreas.includes(m.area));
 
   // 應用篩選
   const filteredMinsu = assignedMinsu
@@ -58,145 +63,134 @@ export default function StaffMap() {
     .sort((a, b) => b.aiScore - a.aiScore)
     .slice(0, 3);
 
-  // 計算各狀態民宿數量
-  const pinCounts = Object.keys(PIN_COLORS).reduce((acc, status) => {
-    acc[status as PinStatus] = assignedMinsu.filter(m => m.pinStatus === status).length;
-    return acc;
-  }, {} as Record<PinStatus, number>);
+  // 根據通話結果判斷 Pin 狀態
+  const getPinStatusFromCallResult = (callResult: CallResult, minsu: Minsu): PinStatus => {
+    if (minsu.cooperationCount >= 3) return 'gold';
+    if (minsu.cooperationCount > 0) return 'purple';
+    if (callResult === 'agreed') return 'green';
+    if (minsu.pinStatus === 'red-star') return 'red-star';
+    return 'red';
+  };
+
+  // 計算 PIN 狀態計數
+  const pinCounts: Record<PinStatus, number> = {
+    'red-star': 0,
+    'red': 0,
+    'green': 0,
+    'purple': 0,
+    'gold': 0,
+  };
+  assignedMinsu.forEach(m => {
+    pinCounts[m.pinStatus as PinStatus]++;
+  });
+
+  // 獲取唯一的地區列表
+  const getUniqueAreas = () => {
+    return [...new Set(assignedMinsu.map(m => m.area))].sort();
+  };
 
   // 初始化 Leaflet 地圖
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
 
-    const loadLeaflet = async () => {
-      if (!(window as any).L) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-        document.head.appendChild(link);
+    const L = (window as any).L;
+    if (!L) return;
 
-        await new Promise<void>((resolve) => {
-          const script = document.createElement('script');
-          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-          script.onload = () => resolve();
-          document.head.appendChild(script);
-        });
-      }
-
-      const L = (window as any).L;
-      const map = L.map(mapRef.current).setView([24.72, 121.75], 11);
-
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 18,
-      }).addTo(map);
-
-      mapInstanceRef.current = map;
-    };
-
-    loadLeaflet();
+    const map = L.map(mapRef.current).setView([24.8, 121.0], 9);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    mapInstanceRef.current = map;
 
     return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
+      map.remove();
+      mapInstanceRef.current = null;
     };
   }, []);
 
   // 更新地圖標記
   useEffect(() => {
-    if (!mapInstanceRef.current || !(window as any).L) return;
-    const L = (window as any).L;
+    const map = mapInstanceRef.current;
+    if (!map) return;
 
-    markersRef.current.forEach(m => m.remove());
+    // 清除舊標記
+    markersRef.current.forEach(marker => marker.remove());
     markersRef.current = [];
 
-    filteredMinsu.forEach((minsu: Minsu) => {
-      const pinColor = PIN_COLORS[minsu.pinStatus as PinStatus]?.bg || '#6b7280';
+    // 添加新標記
+    filteredMinsu.forEach(minsu => {
+      const L = (window as any).L;
+      const pinColor = PIN_COLORS[minsu.pinStatus as PinStatus];
 
+      const marker = L.marker([minsu.latitude, minsu.longitude], {
+        title: minsu.name,
+      })
+        .bindPopup(`<div class="text-sm font-bold">${minsu.name}</div>`)
+        .addTo(map);
+
+      // 自定義標記圖標
       const icon = L.divIcon({
-        className: 'custom-pin',
-        html: `<div style="
-          width: 28px; height: 28px; border-radius: 50%;
-          background: ${pinColor}; border: 2px solid white;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 12px; font-weight: bold; color: ${PIN_COLORS[minsu.pinStatus as PinStatus]?.color || '#fff'};
-        ">${minsu.pinStatus === 'red-star' ? '⭐' : ''}</div>`,
-        iconSize: [28, 28],
-        iconAnchor: [14, 14],
+        html: `<div style="background-color: ${pinColor.bg}; color: ${pinColor.color}; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-center; font-size: 16px; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">${pinColor.icon}</div>`,
+        iconSize: [32, 32],
+        className: 'custom-marker',
       });
+      marker.setIcon(icon);
 
-      const marker = L.marker([minsu.latitude, minsu.longitude], { icon })
-        .addTo(mapInstanceRef.current)
-        .on('click', () => {
-          setSelectedMinsu(minsu);
-          mapInstanceRef.current.setView([minsu.latitude, minsu.longitude], 15);
-        });
-
-      marker.bindTooltip(minsu.name, { 
-        direction: 'top', 
-        offset: [0, -15],
-        permanent: false,
+      marker.on('click', () => {
+        setSelectedMinsu(minsuData[minsu.id]);
       });
 
       markersRef.current.push(marker);
     });
-  }, [filteredMinsu]);
+  }, [filteredMinsu, minsuData]);
 
-  const handleCall = (minsu: Minsu) => {
-    setLocation(`/staff/call?id=${minsu.id}`);
-  };
+  // 加載 Leaflet 庫
+  useEffect(() => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+    document.head.appendChild(link);
 
-  const getUniqueAreas = () => {
-    const areas = new Set(assignedMinsu.map(m => m.area));
-    return Array.from(areas);
-  };
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+    document.body.appendChild(script);
+
+    return () => {
+      document.head.removeChild(link);
+      document.body.removeChild(script);
+    };
+  }, []);
 
   return (
     <Layout role="staff">
       <PageHeader
-        title="地圖作業"
-        subtitle={`${staffName} · 負責區域：${assignedAreas.join('、')}`}
+        title={`地圖作業 - ${staffName}`}
+        subtitle={`負責區域: ${assignedAreas.join('、')} — 共 ${assignedMinsu.length} 家民宿`}
       />
 
-      <div className="flex h-[calc(100vh-73px)] bg-slate-50">
+      <div className="flex h-[calc(100vh-120px)] gap-0">
         {/* 左側邊欄 */}
-        <div className="w-64 bg-white border-r border-slate-200 flex flex-col overflow-hidden">
-          {/* 頂部標題 */}
-          <div className="p-3 border-b border-slate-200">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                🔥
-              </div>
-              <div>
-                <div className="font-semibold text-sm text-slate-900">CC 代客烤肉 CRM</div>
-                <div className="text-xs text-slate-500">顧客開發人員作業平台</div>
-              </div>
-            </div>
-          </div>
-
+        <div className="w-80 bg-white border-r border-slate-200 flex flex-col overflow-hidden">
           {/* AI 推薦優先撥打 */}
-          <div className="p-3 border-b border-slate-200 bg-red-50">
-            <div className="flex items-center gap-2 mb-2">
-              <Star className="w-4 h-4 text-red-500 fill-red-500" />
-              <span className="text-sm font-semibold text-red-700">AI 推薦優先撥打</span>
-            </div>
-            <div className="space-y-1.5">
+          <div className="p-3 border-b border-slate-200">
+            <div className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">⭐ AI 推薦優先撥打</div>
+            <div className="space-y-1">
               {aiRecommended.length > 0 ? (
-                aiRecommended.map((minsu, idx) => (
+                aiRecommended.map((minsu) => (
                   <div
                     key={minsu.id}
                     onClick={() => setSelectedMinsu(minsu)}
-                    className="p-2 bg-white rounded-lg cursor-pointer hover:shadow-sm transition-shadow border border-red-100 text-xs"
+                    className={`p-2 rounded-lg cursor-pointer transition-all text-xs group ${
+                      selectedMinsu?.id === minsu.id
+                        ? 'bg-red-50 border border-red-200'
+                        : 'hover:bg-red-50 border border-transparent'
+                    }`}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="font-semibold text-slate-900">{idx + 1}. {minsu.name}</div>
-                        <div className="text-slate-500 text-xs mt-0.5">{minsu.area}</div>
+                    <div className="flex items-center gap-2">
+                      <Star className="w-3 h-3 text-red-500 fill-red-500 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-slate-900 truncate">{minsu.name}</div>
+                        <div className="text-xs text-slate-500">{minsu.area} · {minsu.aiScore}分</div>
                       </div>
-                      <Badge variant="secondary" className="text-xs ml-2 bg-red-100 text-red-700 font-semibold">
+                      <Badge className="text-xs bg-red-100 text-red-700 font-semibold flex-shrink-0">
                         {minsu.aiScore}/50
                       </Badge>
                     </div>
@@ -351,7 +345,7 @@ export default function StaffMap() {
                 </div>
                 <div>
                   <span className="text-slate-500 font-medium">通話結果</span>
-                  <p className="font-medium text-slate-900 mt-1">未聯繫</p>
+                  <p className="font-medium text-slate-900 mt-1">{selectedMinsu.callResult ? '已聯繫' : '未聯繫'}</p>
                 </div>
               </div>
             </div>
@@ -366,12 +360,12 @@ export default function StaffMap() {
                 <div>
                   <span className="text-slate-500 font-medium">LINE 狀態</span>
                   <p className="font-medium text-slate-900 mt-1">
-                    {selectedMinsu.pinStatus === 'green' ? '✅ 已加入' : '❌ 未加入'}
+                    {selectedMinsu.lineAdded ? '✅ 已加入' : '❌ 未加入'}
                   </p>
                 </div>
                 <div>
                   <span className="text-slate-500 font-medium">合作次數</span>
-                  <p className="font-medium text-slate-900 mt-1">0 次</p>
+                  <p className="font-medium text-slate-900 mt-1">{selectedMinsu.cooperationCount} 次</p>
                 </div>
               </div>
             </div>
@@ -402,7 +396,7 @@ export default function StaffMap() {
             <div className="border-t border-slate-200 pt-4">
               <Button
                 className="w-full h-10 text-sm gap-2 font-bold bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white rounded-lg"
-                onClick={() => handleCall(selectedMinsu)}
+                onClick={() => setShowContactDialog(true)}
               >
                 <Phone className="w-4 h-4" />
                 聯繫完成
@@ -411,6 +405,46 @@ export default function StaffMap() {
           </div>
         </div>
       )}
+
+      {/* 聯繫完成對話框 */}
+      <ContactCompleteDialog
+        open={showContactDialog}
+        minsu={selectedMinsu}
+        onOpenChange={setShowContactDialog}
+        onSave={(data) => {
+          if (selectedMinsu) {
+            // Step 7-8: 更新民宿的數據和 Pin 狀態
+            const updatedMinsu: Minsu = {
+              ...selectedMinsu,
+              callResult: data.callResult,
+              lineAdded: data.callResult === 'agreed' ? true : selectedMinsu.lineAdded,
+              note: data.note || selectedMinsu.note,
+              // 根據通話結果更新 Pin 狀態
+              pinStatus: getPinStatusFromCallResult(data.callResult, selectedMinsu),
+              // 記錄通話時間
+              callSummaries: [
+                ...(selectedMinsu.callSummaries || []),
+                {
+                  id: `call-${Date.now()}`,
+                  timestamp: new Date().toISOString(),
+                  summary: data.note || '',
+                  intentLabel: 'inquiring',
+                  source: 'manual',
+                },
+              ],
+            };
+
+            // 更新數據存儲
+            setMinsuData(prev => ({ ...prev, [selectedMinsu.id]: updatedMinsu }));
+            setSelectedMinsu(updatedMinsu);
+
+            toast.success(`已登錄「${selectedMinsu.name}」的通話結果`);
+            if (data.callResult === 'agreed') {
+              toast.success('🎉 已觸發自動化流程：LINE 邀請 + 菜單已自動發送！', { duration: 4000 });
+            }
+          }
+        }}
+      />
     </Layout>
   );
 }
