@@ -269,7 +269,8 @@ export function ContactCompleteDialog({
                       </p>
                     </div>
                   </div>
-                  {FEEDBACK_STATES[selectedResult].followUpDays !== undefined &&
+                  {selectedResult !== 'rejected' &&
+                    FEEDBACK_STATES[selectedResult].followUpDays !== undefined &&
                     FEEDBACK_STATES[selectedResult].followUpDays > 0 && (
                       <div className="border-t border-current border-opacity-20 pt-3">
                         <Badge className="bg-blue-100 text-blue-700 text-xs">
@@ -280,20 +281,22 @@ export function ContactCompleteDialog({
                 </div>
               </Card>
 
-              {/* 快速標籤 */}
-              <div>
-                <label className="text-sm font-medium text-slate-700 block mb-2">快速標籤（可複選）</label>
-                <div className="flex flex-wrap gap-2">
-                  {['有興趣', '價格敏感', '需要時間', '已加LINE', '待追蹤', '優先客戶'].map((tag) => (
-                    <button
-                      key={tag}
-                      className="px-3 py-1 text-xs border border-slate-300 rounded-full hover:bg-slate-100 transition-colors"
-                    >
-                      {tag}
-                    </button>
-                  ))}
+              {/* 快速標籤 - 拒絕加賴時不顯示 */}
+              {selectedResult !== 'rejected' && (
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-2">快速標籤（可複選）</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['有興趣', '價格敏感', '需要時間', '已加LINE', '待追蹤', '優先客戶'].map((tag) => (
+                      <button
+                        key={tag}
+                        className="px-3 py-1 text-xs border border-slate-300 rounded-full hover:bg-slate-100 transition-colors"
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* 備注欄 */}
               <div>
