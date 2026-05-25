@@ -1,5 +1,5 @@
-// CC 代客烤肉 CRM 系統 — 績效結報（老闆管理介面）
-// 設計：日報、周報、結報（總累計績效）
+// CC 代客烤肉 CRM 系統 — 績效儀表板（老闆管理介面）
+// 設計：日報、周報、結報統計與趨勢分析（宏觀視角）
 
 import { useState } from 'react';
 import Layout, { PageHeader } from '@/components/Layout';
@@ -7,7 +7,7 @@ import { DAILY_PERFORMANCE, WEEKLY_PERFORMANCE, MONTHLY_PERFORMANCE, STAFF_RECOR
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp, Phone, CheckCircle, Clock, Download } from 'lucide-react';
+import { TrendingUp, Phone, CheckCircle, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { exportPerformanceReport } from '@/lib/excelExport';
 import { toast } from 'sonner';
@@ -124,8 +124,8 @@ export default function PerformanceReport() {
   return (
     <Layout role="boss">
       <PageHeader
-        title="績效管理報表"
-        subtitle="顧客開發人員日報・周報・結報統計"
+        title="績效儀表板"
+        subtitle="日報・周報・結報統計與趨勢分析"
       />
 
       <div className="p-6 space-y-6">

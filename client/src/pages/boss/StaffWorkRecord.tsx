@@ -1,5 +1,5 @@
-// CC 代客烤肉 CRM 系統 — 銷售人員作業紀錄（老闆管理介面）
-// 設計：顧客開發人員卡片、撥號記錄表、今日結果分佈、整體成效
+// CC 代客烤肉 CRM 系統 — 工作監控（老闆管理介面）
+// 設計：顧客開發人員卡片、撥議記錄表、今日結果分佈（微觀視角）
 
 import { useState } from 'react';
 import Layout, { PageHeader } from '@/components/Layout';
@@ -80,8 +80,8 @@ export default function StaffWorkRecord() {
   return (
     <Layout role="boss">
       <PageHeader
-        title="銷售人員作業紀錄"
-        subtitle="顧客開發人員撥打記錄•成效統計•老闆全覽"
+        title="工作監控"
+        subtitle="顧客開發人員撥打記錄・今日成效分佈・整體表現"
       />
 
       <div className="p-6 space-y-6">
