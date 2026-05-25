@@ -211,31 +211,32 @@ export default function StaffMap() {
           </div>
 
           {/* 篩選器 */}
-          <div className="p-3 border-b border-slate-200 space-y-2">
-            <div className="text-xs font-semibold text-slate-600 uppercase tracking-wider">主選擇器</div>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="Pin 狀態" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部顯示</SelectItem>
-                {Object.entries(PIN_COLORS).map(([key, cfg]) => (
-                  <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="text-xs font-semibold text-slate-600 uppercase tracking-wider mt-2">主題篩選</div>
-            <Select value={filterArea} onValueChange={setFilterArea}>
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="地區" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部地區</SelectItem>
-                {getUniqueAreas().map((area) => (
-                  <SelectItem key={area} value={area}>{area}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="p-3 border-b border-slate-200">
+            <div className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">主選擇器</div>
+            <div className="grid grid-cols-2 gap-2">
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="全部顯示" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部顯示</SelectItem>
+                  {Object.entries(PIN_COLORS).map(([key, cfg]) => (
+                    <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filterArea} onValueChange={setFilterArea}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="全部地區" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部地區</SelectItem>
+                  {getUniqueAreas().map((area) => (
+                    <SelectItem key={area} value={area}>{area}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* PIN 狀態說明 */}
